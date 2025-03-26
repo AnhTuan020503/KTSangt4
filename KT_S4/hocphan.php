@@ -14,7 +14,7 @@ if (!isset($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
 }
 
-// Lấy danh sách học phần
+// Lấy danh sách học phần từ cơ sở dữ liệu
 $sql = "SELECT * FROM HocPhan ORDER BY MaHP";
 $stmt = $conn->prepare($sql);
 $stmt->execute();
@@ -61,38 +61,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['remove']) && isset($_P
         }
     }
 }
-
-
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['register']) && isset($_POST['mahp'])) {
-    $mahp = $_POST['mahp'];
-
-    // Lấy thông tin học phần
-    $sql = "SELECT * FROM HocPhan WHERE MaHP = :mahp";
-    $stmt = $conn->prepare($sql);
-    $stmt->execute([':mahp' => $mahp]);
-    $course = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if ($course) {
-        if ($course['SoLuongConLai'] > 0) { // Kiểm tra số lượng còn lại
-            if (!in_array($mahp, array_column($_SESSION['cart'], 'MaHP'))) {
-                // Thêm vào giỏ
-                $_SESSION['cart'][] = $course;
-
-                // Giảm số lượng trong CSDL
-                $sql = "UPDATE HocPhan SET SoLuongConLai = SoLuongConLai - 1 WHERE MaHP = :mahp";
-                $stmt = $conn->prepare($sql);
-                $stmt->execute([':mahp' => $mahp]);
-
-                $success = "Đã thêm học phần vào giỏ đăng ký!";
-            } else {
-                $error = "Học phần này đã có trong giỏ!";
-            }
-        } else {
-            $error = "Học phần này đã hết chỗ!";
-        }
-    }
-}
-
 ?>
 
 <!DOCTYPE html>
@@ -100,38 +68,119 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['register']) && isset($
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test1 - Học Phần</title>
+    <title>Đăng Ký Học Phần</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .page-title {
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-weight: 600;
+            text-align: center;
+        }
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        .card-header {
+            background-color: #3498db;
+            color: white;
+            border-radius: 10px 10px 0 0 !important;
+            padding: 15px 20px;
+        }
+        .table {
+            margin-bottom: 0;
+        }
+        .table th {
+            background-color: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+        }
+        .table td {
+            vertical-align: middle;
+        }
+        .btn-primary {
+            background-color: #3498db;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+        }
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+        .btn-danger {
+            background-color: #e74c3c;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+        }
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+        .alert {
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .cart-summary {
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.05);
+        }
+        .cart-count {
+            background-color: #e74c3c;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-left: 5px;
+        }
+    </style>
 </head>
 <body>
     <?php include 'header.php'; ?>
 
     <div class="container mt-4">
-        <h2>DANH SÁCH HỌC PHẦN</h2>
+        <h2 class="page-title">DANH SÁCH HỌC PHẦN</h2>
 
         <?php if (isset($success)): ?>
-            <div class="alert alert-success"><?php echo $success; ?></div>
+            <div class="alert alert-success">
+                <i class="fas fa-check-circle"></i> <?php echo $success; ?>
+            </div>
         <?php endif; ?>
 
         <?php if (isset($error)): ?>
-            <div class="alert alert-danger"><?php echo $error; ?></div>
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-circle"></i> <?php echo $error; ?>
+            </div>
         <?php endif; ?>
 
         <!-- Hiển thị giỏ đăng ký -->
         <?php if (!empty($_SESSION['cart'])): ?>
-            <div class="card mb-4">
-                <div class="card-header bg-info text-white">
-                    Giỏ đăng ký (<?php echo count($_SESSION['cart']); ?> học phần)
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-shopping-cart"></i> Giỏ đăng ký
+                    <span class="cart-count"><?php echo count($_SESSION['cart']); ?></span>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-sm">
+                        <table class="table">
                             <thead>
                                 <tr>
-                                    <th>MaHP</th>
+                                    <th>Mã HP</th>
                                     <th>Tên Học Phần</th>
                                     <th>Số Tín Chỉ</th>
-                                    <th></th>
+                                    <th>Thao Tác</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -143,7 +192,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['register']) && isset($
                                     <td>
                                         <form method="POST" style="display: inline;">
                                             <input type="hidden" name="mahp" value="<?php echo htmlspecialchars($item['MaHP']); ?>">
-                                            <button type="submit" name="remove" class="btn btn-danger btn-sm">Xóa</button>
+                                            <button type="submit" name="remove" class="btn btn-danger btn-sm">
+                                                <i class="fas fa-trash"></i> Xóa
+                                            </button>
                                         </form>
                                     </td>
                                 </tr>
@@ -151,47 +202,62 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['register']) && isset($
                             </tbody>
                         </table>
                     </div>
-                    <div class="text-end mt-2">
-                        <a href="dangky.php" class="btn btn-primary">Xem giỏ đăng ký</a>
+                    <div class="text-end mt-3">
+                        <a href="dangky.php" class="btn btn-primary">
+                            <i class="fas fa-check"></i> Xác nhận đăng ký
+                        </a>
                     </div>
                 </div>
             </div>
         <?php endif; ?>
 
         <!-- Danh sách học phần -->
-        <table class="table">
-            <thead>
-        <tr>
-            <th>MaHP</th>
-            <th>Tên Học Phần</th>
-            <th>Số Tín Chỉ</th>
-            <th>Số Lượng Còn Lại</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        <?php foreach($courses as $course): ?>
-        <tr>
-            <td><?php echo htmlspecialchars($course['MaHP']); ?></td>
-            <td><?php echo htmlspecialchars($course['TenHP']); ?></td>
-            <td><?php echo htmlspecialchars($course['SoTinChi']); ?></td>
-            <td><?php echo htmlspecialchars($course['SoLuongConLai']); ?></td>
-            <td>
-                <form method="POST" style="display: inline;">
-                    <input type="hidden" name="mahp" value="<?php echo htmlspecialchars($course['MaHP']); ?>">
-                    <button type="submit" name="register" class="btn btn-primary btn-sm"
-                        <?php echo ($course['SoLuongConLai'] == 0 || in_array($course['MaHP'], array_column($_SESSION['cart'], 'MaHP'))) ? 'disabled' : ''; ?>>
-                        <?php echo ($course['SoLuongConLai'] == 0) ? 'Hết chỗ' : (in_array($course['MaHP'], array_column($_SESSION['cart'], 'MaHP')) ? 'Đã thêm vào giỏ' : 'Thêm vào giỏ'); ?>
-                    </button>
-                </form>
-            </td>
-        </tr>
-        <?php endforeach; ?>
-    </tbody>
-
-        </table>
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-book"></i> Danh sách học phần có thể đăng ký
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Mã HP</th>
+                                <th>Tên Học Phần</th>
+                                <th>Số Tín Chỉ</th>
+                                <th>Số Lượng Còn Lại</th>
+                                <th>Thao Tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach($courses as $course): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($course['MaHP']); ?></td>
+                                <td><?php echo htmlspecialchars($course['TenHP']); ?></td>
+                                <td><?php echo htmlspecialchars($course['SoTinChi']); ?></td>
+                                <td>
+                                    <span class="badge <?php echo $course['SoLuongConLai'] > 0 ? 'bg-success' : 'bg-danger'; ?>">
+                                        <?php echo htmlspecialchars($course['SoLuongConLai']); ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <form method="POST" style="display: inline;">
+                                        <input type="hidden" name="mahp" value="<?php echo htmlspecialchars($course['MaHP']); ?>">
+                                        <button type="submit" name="register" class="btn btn-primary btn-sm"
+                                            <?php echo ($course['SoLuongConLai'] == 0 || in_array($course['MaHP'], array_column($_SESSION['cart'], 'MaHP'))) ? 'disabled' : ''; ?>>
+                                            <i class="fas fa-plus"></i>
+                                            <?php echo ($course['SoLuongConLai'] == 0) ? 'Hết chỗ' : (in_array($course['MaHP'], array_column($_SESSION['cart'], 'MaHP')) ? 'Đã thêm vào giỏ' : 'Thêm vào giỏ'); ?>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-</html> 
+</html>
